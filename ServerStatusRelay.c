@@ -105,9 +105,9 @@ void UpdateFanspeed(int FanNumber, int temp, int fd) {
     } else {
         speed = 100;    
     }
-    sprintf(message, "f %d %d", speed, FanNumber);
+    sprintf(message, "f %d %d\n", speed, FanNumber);
     int n = write(fd, message, strlen(message));
-    printf("Wrote %d bytes: %s", n, message);
+    printf("Wrote %d bytes: %s\n", n, message);
 }
 
 int main() {
