@@ -106,10 +106,10 @@ void UpdateFanspeed(int FanNumber, int temp, int fd) {
         speed = 100;    
     }
     if (speed < 40) {
-        sprintf(message, "f %d %d\n", 40, FanNumber);
+        sprintf(message, "f %d %d\n", 45, FanNumber);
         int n = write(fd, message, strlen(message));
         printf("Wrote %d bytes: %s", n, message);
-        usleep(200000);
+        sleep(1);
     }
     sprintf(message, "f %d %d\n", speed, FanNumber);
     int n = write(fd, message, strlen(message));
@@ -209,7 +209,7 @@ int main() {
     int temp = -1;
     int tempAverage = 0;
 
-    for (int i = 1; i <= NumberOfFans; i++) {    
+    for (int i = 0; i <= 7; i++) {    
         getData("gpu", "temp", i, data);
         sscanf(data, "%*s %*s %*d %d", &temp);
         if (temp > 65) {
@@ -218,7 +218,7 @@ int main() {
         tempAverage += temp;
     }
     tempAverage /= 8;
-    printf("average gpu temp: %d", tempAverage);
+    printf("average gpu temp: %d\n", tempAverage);
 
     for (int i = 1; i <= NumberOfFans; i++) {    
         UpdateFanspeed(i, tempAverage, fd);
