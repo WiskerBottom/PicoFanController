@@ -189,17 +189,20 @@ int main() {
     if (temp < 40) {
         const char *message = "f 0 1\n";
         n = write(fd, message, strlen(message));
-    } else (temp < 70) {
+        printf("Wrote %d bytes: %s", n, message);
+    } else if (temp < 70) {
         const char *message = "f 15 1\n";
         n = write(fd, message, strlen(message));
-    } else (temp < 90) {
+        printf("Wrote %d bytes: %s", n, message);
+    } else if (temp < 90) {
         const char *message = "f 50 1\n";
         n = write(fd, message, strlen(message));
+        printf("Wrote %d bytes: %s", n, message);
     } else {
         const char *message = "f 100 1\n";
         n = write(fd, message, strlen(message));
+        printf("Wrote %d bytes: %s", n, message);
     }
-    printf("Wrote %d bytes: %s", n, message);
     
     tcdrain(fd); //blocks until everything written to the port is transmitted
 
@@ -224,83 +227,4 @@ int main() {
     close(fd);
 
     return 0;
-}
-
-char* getData(char* type, char* info, int index, char* formattedBuffer) {
-    char buffer[BUFFER_SIZE];
-    if (strcmp(type, "cpu") == 0) {
-        if (strcmp(info, "temp") == 0) {
-            sprintf(formattedBuffer, "/sys/class/thermal/thermal_zone%d/temp", index);
-            int fd = open(formattedBuffer, O_RDONLY);
-            if (fd==-1) {
-                printf("failed to open file!\n");
-                return (char*)1; //failed to open cpu temp file
-            }
-            memset(buffer, 0, sizeof(buffer)); //if we don't zero out the buffers before my manual string editing later doesn't work ;(
-            memset(formattedBuffer, 0, sizeof(buffer));
-            read(fd, buffer, 49); //same deal for only reading 49 a \n is appended at the end (also why we don't put a \n in the sprintf below!)
-            sprintf(formattedBuffer, "cpu temp %d %s", index, buffer);
-            formattedBuffer[strlen(formattedBuffer)-4] = '\n'; //chop of last 3 digits of the string (since the value is recorded in millicelcius this is like dividing by 1000 and then flooring)
-            formattedBuffer[strlen(formattedBuffer)-3] = '\0'; //jank? yes! but working? also yes!
-            close(fd);
-        } else {
-            return (char*)2; //failed to find temp in cpu file
-        }
-    } else if (strcmp(type, "gpu") == 0) {
-        if (strcmp(info, "vram") == 0) {
-            system("rocm-smi --showmemuse --csv > rocm_output.txt");
-            int fd = open("rocm_output.txt", O_RDONLY);
-            if (fd==-1) {
-                printf("failed to open file!\n");
-                return (char*)1; //failed to open rocm output 
-            }
-            buffer[0] == 'c'; //to prevent the first chacter in the buffer randomly being ','
-            for (int i = 0; i < (3 + 2 * index); i++) { //loop 3 times to get to the after the 3rd comma
-                while (buffer[0] != ',') {
-                    read(fd, buffer, 1);
-                    //printf("current char being analysed: %c\n", buffer[0]);
-                }
-                buffer[0] = 'c'; //as we just found a comma we need to change it to something else so when we come back round next time we don't immediately see it again.
-            }
-            read(fd, buffer, 3); //percentage goes from 0 - 100 so we read the next 3 bytes
-
-            //chop off anything after the next comma (comma also gets chopped)
-            int i = 0;
-            while (buffer[i] != ',') {
-                //printf("current char being analysed (2): %c\n", buffer[i]);
-                i++;
-            }
-            buffer[i] = '\0';
-
-            sprintf(formattedBuffer, "gpu vram %d %s\n", index, buffer); //use sprtinf to remove potential trailing junk
-            close(fd);
-        } else if (strcmp(info, "temp") == 0) {
-            system("rocm-smi --showtemp --csv > rocm_output.txt");
-            int fd = open("rocm_output.txt", O_RDONLY);
-            if (fd==-1) {
-                printf("failed to open file!\n");
-                return (char*)1; //failed to open rocm output
-            }
-            buffer[0] == 'c'; //to prevent the first chacter in the buffer randomly being ','
-            for (int i = 0; i < (5 + 3 * index); i++) { //loop 3 times to get to the after the 3rd comma
-                while (buffer[0] != ',') {
-                    read(fd, buffer, 1);
-                    //printf("current char being analysed: %c\n", buffer[0]);
-                }
-                buffer[0] = 'c'; //as we just found a comma we need to change it to something else so when we come back round next time we don't immediately see it again.
-            }
-            read(fd, buffer, 2); //temp is displayed as xx.x so we read 2 to get the whole number part
-            buffer[2] = '\0'; //add null terminator so it detects as a string properly
-
-            sprintf(formattedBuffer, "gpu temp %d %s\n", index, buffer); //use sprtinf to remove potential trailing junk
-            close(fd);
-        } else {
-            return (char*)2; //could not parse gpu info desired
-        }
-    } else {
-        return (char*)3; //could not parse whether command is for gpu or cpu
-    }
-
-    printf("formattedBuffer: %s", formattedBuffer);
-    return formattedBuffer;
 }
