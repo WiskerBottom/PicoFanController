@@ -96,11 +96,11 @@ char* getData(char* type, char* info, int index, char* formattedBuffer) {
 void UpdateFanspeed(int FanNumber, int temp, int fd) {
     char message[100];
     int speed = 100;
-    if (temp < 40) {
+    if (0 < temp < 40) {
         speed = 0;
-    } else if (temp < 70) {
+    } else if (40 <= temp < 70) {
         speed = 15;
-    } else if (temp < 90) {
+    } else if (70 <= temp < 90) {
         speed = 50;
     } else {
         speed = 100;    
