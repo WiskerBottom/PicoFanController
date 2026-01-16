@@ -12,6 +12,7 @@
 #include <fcntl.h>
 
 #define BUFFER_SIZE 50
+#define NumberOfFans 8
 
 char* getData(char* type, char* info, int index, char* formattedBuffer) {
     char buffer[BUFFER_SIZE];
@@ -90,6 +91,23 @@ char* getData(char* type, char* info, int index, char* formattedBuffer) {
 
     printf("formattedBuffer: %s", formattedBuffer);
     return formattedBuffer;
+}
+
+void UpdateFanspeed(int FanNumber, int temp, int fd) {
+    char message[100];
+    int speed = 100;
+    if (temp < 40) {
+        speed = 0;
+    } else if (temp < 70) {
+        speed = 15;
+    } else if (temp < 90) {
+        speed = 50;
+    } else {
+        speed = 100;    
+    }
+    sprintf(message, "f %d %d", speed, FanNumber);
+    int n = write(fd, message, strlen(message));
+    printf("Wrote %d bytes: %s", n, message);
 }
 
 int main() {
@@ -186,24 +204,10 @@ int main() {
     getData("gpu", "temp", 0, data);
     sscanf(data, "%*s %*s %*d %d", &temp);
 
-    if (temp < 40) {
-        const char *message = "f 0 1\n";
-        n = write(fd, message, strlen(message));
-        printf("Wrote %d bytes: %s", n, message);
-    } else if (temp < 70) {
-        const char *message = "f 15 1\n";
-        n = write(fd, message, strlen(message));
-        printf("Wrote %d bytes: %s", n, message);
-    } else if (temp < 90) {
-        const char *message = "f 50 1\n";
-        n = write(fd, message, strlen(message));
-        printf("Wrote %d bytes: %s", n, message);
-    } else {
-        const char *message = "f 100 1\n";
-        n = write(fd, message, strlen(message));
-        printf("Wrote %d bytes: %s", n, message);
+    for (int i = 1; i <= NumberOfFans; i++) {    
+        UpdateFanspeed(i, temp, fd);
     }
-    
+
     tcdrain(fd); //blocks until everything written to the port is transmitted
 
 
