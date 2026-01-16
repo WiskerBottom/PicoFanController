@@ -98,12 +98,18 @@ void UpdateFanspeed(int FanNumber, int temp, int fd) {
     int speed = 100;
     if (0 < temp && temp < 40) {
         speed = 0;
-    } else if (40 <= temp && temp < 70) {
-        speed = 15;
-    } else if (70 <= temp && temp < 90) {
+    } else if (40 <= temp && temp < 60) {
+        speed = 20;
+    } else if (60 <= temp && temp < 90) {
         speed = 50;
     } else {
         speed = 100;    
+    }
+    if (speed < 40) {
+        sprintf(message, "f %d %d\n", 40, FanNumber);
+        int n = write(fd, message, strlen(message));
+        printf("Wrote %d bytes: %s", n, message);
+        usleep(200000);
     }
     sprintf(message, "f %d %d\n", speed, FanNumber);
     int n = write(fd, message, strlen(message));
@@ -111,6 +117,7 @@ void UpdateFanspeed(int FanNumber, int temp, int fd) {
 }
 
 int main() {
+
     const char *portname = "/dev/ttyACM0";  // Change this to your port
     int fd;
     int n;
@@ -200,12 +207,21 @@ int main() {
     char data[BUFFER_SIZE] = {0};
     char command[BUFFER_SIZE] = {0};
     int temp = -1;
-
-    getData("gpu", "temp", 0, data);
-    sscanf(data, "%*s %*s %*d %d", &temp);
+    int tempAverage = 0;
 
     for (int i = 1; i <= NumberOfFans; i++) {    
-        UpdateFanspeed(i, temp, fd);
+        getData("gpu", "temp", i, data);
+        sscanf(data, "%*s %*s %*d %d", &temp);
+        if (temp > 65) {
+            tempAverage = 1000; //will force fans to 100%
+        }
+        tempAverage += temp;
+    }
+    tempAverage /= 8;
+    printf("average gpu temp: %d", tempAverage);
+
+    for (int i = 1; i <= NumberOfFans; i++) {    
+        UpdateFanspeed(i, tempAverage, fd);
     }
 
     tcdrain(fd); //blocks until everything written to the port is transmitted
